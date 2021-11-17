@@ -27,6 +27,8 @@
   </div>
 </template>
 <script>
+import { getThemeValue } from "../utils/theme_utils";
+import { mapState } from "vuex";
 export default {
   data() {
     return {
@@ -39,6 +41,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(["theme"]),
     choiceTypeList() {
       if (!this.allData) {
         return "";
@@ -55,7 +58,10 @@ export default {
       }
     },
     fontStyle() {
-      return { fontSize: this.titleFontSize / 2 + "px" };
+      return {
+        fontSize: this.titleFontSize / 2 + "px",
+        color: getThemeValue(this.theme).titleColor
+      };
     }
   },
   mounted() {
@@ -69,7 +75,7 @@ export default {
   },
   methods: {
     initCharts() {
-      this.myCharts = this.$echarts.init(this.$refs.trendRef, "chalk");
+      this.myCharts = this.$echarts.init(this.$refs.trendRef, this.theme);
       const initOption = {
         title: {},
         xAxis: {
@@ -187,6 +193,14 @@ export default {
       };
       this.myCharts.setOption(adapterOption);
       this.myCharts.resize();
+    }
+  },
+  watch: {
+    theme() {
+      this.myCharts.dispose();
+      this.initCharts();
+      this.screenAdapter();
+      this.updateCharts();
     }
   }
 };

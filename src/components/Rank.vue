@@ -12,7 +12,9 @@ export default {
       allData: [],
       totalPage: 0,
       currentPage: 1,
-      timer: null
+      timer: null,
+      start: 0,
+      end: 8
     };
   },
   mounted() {
@@ -30,18 +32,15 @@ export default {
       this.myCharts = this.$echarts.init(this.$refs.sellerRef, this.theme);
       const initOption = {
         title: {
-          text: "商家销售列表",
-          textStyle: {
-            fontSize: 60
-          },
+          text: "商家排行列表",
           left: 20,
-          top: 20
+          top: 10
         },
         xAxis: {
-          type: "value"
+          type: "category"
         },
         yAxis: {
-          type: "category"
+          type: "value"
         },
         grid: {
           top: "20%",
@@ -50,41 +49,9 @@ export default {
           bottom: "10%",
           containLabel: true
         },
-        tooltip: {
-          trigger: "axis",
-          axisPointer: {
-            type: "line",
-            lineStyle: {
-              width: 60,
-              color: "#2D3443"
-            },
-            z: 0
-          }
-        },
         series: [
           {
-            type: "bar",
-            barWidth: 60,
-            label: {
-              show: true,
-              position: "right",
-              textStyle: {
-                color: "white"
-              }
-            },
-            itemStyle: {
-              barBorderRadius: [0, 30, 30, 0],
-              color: new this.$echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                {
-                  offset: 0,
-                  color: "red"
-                },
-                {
-                  offset: 1,
-                  color: "#bfa"
-                }
-              ])
-            }
+            type: "bar"
           }
         ]
       };
@@ -97,35 +64,60 @@ export default {
       });
     },
     async getData() {
-      const { data: result } = await this.$http.get("/seller");
+      const { data: result } = await this.$http.get("/rank");
       this.allData = result;
       this.allData.sort((a, b) => {
-        return a.value - b.value;
+        return b.value - a.value;
       });
-      this.totalPage =
-        this.allData.length % 5 == 0
-          ? this.allData.length / 5
-          : this.allData.length / 5 + 1;
       this.updateCharts();
       this.startInterval();
     },
     updateCharts() {
-      let start = (this.currentPage - 1) * 5;
-      let end = this.currentPage * 5;
-      let showData = this.allData.slice(start, end);
-      const numberData = showData.map(item => {
+      const baseColor = [
+        ["pink", "green"],
+        ["tomato", "purple"],
+        ["yellow", "blue"]
+      ];
+      const numberData = this.allData.map(item => {
         return item.value;
       });
-      const cateData = showData.map(item => {
+      const cateData = this.allData.map(item => {
         return item.name;
       });
       const dataOption = {
-        yAxis: {
+        xAxis: {
           data: cateData
+        },
+        dataZoom: {
+          show: false,
+          startValue: this.start,
+          endValue: this.end
         },
         series: [
           {
-            data: numberData
+            data: numberData,
+            itemStyle: {
+              color: arg => {
+                let currentColor = null;
+                if (arg.data > 250) {
+                  currentColor = baseColor[0];
+                } else if (arg.data > 150 && arg.data <= 250) {
+                  currentColor = baseColor[1];
+                } else {
+                  currentColor = baseColor[2];
+                }
+                return new this.$echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  {
+                    offset: 0,
+                    color: currentColor[0]
+                  },
+                  {
+                    offset: 1,
+                    color: currentColor[1]
+                  }
+                ]);
+              }
+            }
           }
         ]
       };
@@ -136,9 +128,11 @@ export default {
         clearInterval(this.timer);
       }
       this.timer = setInterval(() => {
-        this.currentPage++;
-        if (this.currentPage > this.totalPage) {
-          this.currentPage = 1;
+        this.start++;
+        this.end++;
+        if (this.end > this.allData.length - 1) {
+          this.start = 0;
+          this.end = 8;
         }
         this.updateCharts();
       }, 2000);
@@ -148,7 +142,7 @@ export default {
       const adapterOption = {
         title: {
           textStyle: {
-            fontSize: adapterFontSize
+            fontSize: adapterFontSize / 1.5
           }
         },
         tooltip: {
@@ -162,7 +156,7 @@ export default {
           {
             barWidth: adapterFontSize,
             itemStyle: {
-              barBorderRadius: [0, adapterFontSize / 2, adapterFontSize / 2, 0]
+              barBorderRadius: [adapterFontSize / 2, adapterFontSize / 2, 0, 0]
             }
           }
         ]
@@ -171,8 +165,8 @@ export default {
       this.myCharts.resize();
     }
   },
-  computed: {
-    ...mapState(["theme"])
+  computed:{
+    ...mapState(['theme'])
   },
   watch: {
     theme() {
@@ -184,4 +178,3 @@ export default {
   }
 };
 </script>
-<style></style>
